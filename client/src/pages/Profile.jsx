@@ -47,21 +47,30 @@ export default function Profile() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // "none" is mutually exclusive with all other options in the same group
   const handleCheckbox = (field, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: prev[field].includes(value)
-        ? prev[field].filter((item) => item !== value)
-        : [...prev[field], value],
-    }));
+    setForm((prev) => {
+      const current = prev[field];
+
+      if (value === "none") {
+        // selecting "none" clears everything else, toggling it off clears the field
+        return { ...prev, [field]: current.includes("none") ? [] : ["none"] };
+      }
+
+      // selecting any real option removes "none" if present
+      const withoutNone = current.filter((item) => item !== "none");
+      const updated = withoutNone.includes(value)
+        ? withoutNone.filter((item) => item !== value)
+        : [...withoutNone, value];
+
+      return { ...prev, [field]: updated };
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
-    console.log("Submitting profile:", form);
-    console.log("Token:", token);
 
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/profile`, form, {
@@ -70,17 +79,40 @@ export default function Profile() {
           "Content-Type": "application/json",
         },
       });
-      console.log("Save response:", res.data);
       setSuccess("Profile saved successfully ✅");
       setTimeout(() => navigate("/home"), 2000);
     } catch (err) {
-      console.error("Save profile error:", err);
-      console.error("Error response:", err.response);
       setError(
         err.response?.data?.message || "Failed to save profile. Please try again."
       );
     }
   };
+
+  const renderGroup = (label, field, options) => (
+    <>
+      <label style={styles.label}>{label}</label>
+      <div style={styles.checkboxGroup}>
+        <label style={{ ...styles.checkboxLabel, ...styles.noneLabel }}>
+          <input
+            type="checkbox"
+            checked={form[field].includes("none")}
+            onChange={() => handleCheckbox(field, "none")}
+          />{" "}
+          None
+        </label>
+        {options.map((opt) => (
+          <label key={opt} style={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={form[field].includes(opt)}
+              onChange={() => handleCheckbox(field, opt)}
+            />{" "}
+            {opt}
+          </label>
+        ))}
+      </div>
+    </>
+  );
 
   return (
     <div style={styles.container}>
@@ -111,66 +143,7 @@ export default function Profile() {
           <input style={styles.input} type="number" name="height_cm"
             value={form.height_cm} onChange={handleChange} placeholder="e.g. 175" />
 
-          <label style={styles.label}>Health Goals</label>
-          <div style={styles.checkboxGroup}>
-            {["lose weight", "build muscle", "eat healthier", "manage diabetes", "manage hypertension"].map((goal) => (
-              <label key={goal} style={styles.checkboxLabel}>
-                <input type="checkbox" checked={form.health_goals.includes(goal)}
-                  onChange={() => handleCheckbox("health_goals", goal)} /> {goal}
-              </label>
-            ))}
-          </div>
+          {renderGroup("Health Goals", "health_goals",
+            ["lose weight", "build muscle", "eat healthier", "manage diabetes", "manage hypertension"])}
 
-          <label style={styles.label}>Dietary Preferences</label>
-          <div style={styles.checkboxGroup}>
-            {["vegetarian", "vegan", "gluten-free", "dairy-free", "halal", "kosher"].map((pref) => (
-              <label key={pref} style={styles.checkboxLabel}>
-                <input type="checkbox" checked={form.dietary_preferences.includes(pref)}
-                  onChange={() => handleCheckbox("dietary_preferences", pref)} /> {pref}
-              </label>
-            ))}
-          </div>
-
-          <label style={styles.label}>Allergies</label>
-          <div style={styles.checkboxGroup}>
-            {["peanuts", "dairy", "gluten", "eggs", "shellfish", "soy"].map((allergy) => (
-              <label key={allergy} style={styles.checkboxLabel}>
-                <input type="checkbox" checked={form.allergies.includes(allergy)}
-                  onChange={() => handleCheckbox("allergies", allergy)} /> {allergy}
-              </label>
-            ))}
-          </div>
-
-          <label style={styles.label}>Medical Conditions</label>
-          <div style={styles.checkboxGroup}>
-            {["diabetes", "hypertension", "high cholesterol", "celiac disease", "lactose intolerance"].map((condition) => (
-              <label key={condition} style={styles.checkboxLabel}>
-                <input type="checkbox" checked={form.medical_conditions.includes(condition)}
-                  onChange={() => handleCheckbox("medical_conditions", condition)} /> {condition}
-              </label>
-            ))}
-          </div>
-
-          <button style={styles.button} type="submit">Save Profile</button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-const styles = {
-  container: { minHeight: "100vh", backgroundColor: "#F9FAFB", padding: "32px 16px" },
-  card: { backgroundColor: "#fff", padding: "40px", borderRadius: "12px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.1)", maxWidth: "500px", margin: "0 auto" },
-  logo: { textAlign: "center", color: "#2D9B6F", fontSize: "28px", marginBottom: "8px" },
-  title: { textAlign: "center", color: "#1E2A2A", marginBottom: "24px" },
-  label: { display: "block", color: "#1E2A2A", fontWeight: "600", marginBottom: "6px", marginTop: "16px" },
-  input: { width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #ddd",
-    fontSize: "16px", boxSizing: "border-box", marginBottom: "8px" },
-  checkboxGroup: { display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "8px" },
-  checkboxLabel: { color: "#6B7280", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" },
-  button: { width: "100%", padding: "14px", backgroundColor: "#2D9B6F", color: "#fff",
-    border: "none", borderRadius: "8px", fontSize: "16px", cursor: "pointer", marginTop: "24px" },
-  success: { color: "#2D9B6F", textAlign: "center", marginBottom: "16px" },
-  error: { color: "#E53935", textAlign: "center", marginBottom: "16px" },
-};
+          {renderGroup("Dietary Preferences",
