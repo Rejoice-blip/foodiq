@@ -1,0 +1,53 @@
+const axios = require('axios');
+
+const searchFood = async (query) => {
+  const apiKey = process.env.USDA_API_KEY;
+  
+  const response = await axios.get(
+    `https://api.nal.usda.gov/fdc/v1/foods/search`,
+    {
+      params: {
+        query: query,
+        api_key: apiKey,
+        pageSize: 5,
+      },
+    }
+  );
+
+  const foods = response.data.foods;
+
+  if (!foods || foods.length === 0) {
+    return null;
+  }
+
+  const results = foods.map((food) => {
+    const nutrients = {};
+    
+    food.foodNutrients.forEach((n) => {
+      const name = n.nutrientName;
+      const value = n.value;
+      
+      if (name === 'Energy' || name === 'Energy (Atwater General Factors)') nutrients.calories = value;
+      if (name === 'Protein') nutrients.protein = value;
+      if (name === 'Carbohydrate, by difference') nutrients.carbs = value;
+      if (name === 'Total lipid (fat)') nutrients.fat = value;
+      if (name === 'Sugars, total including NLEA' || name === 'Total Sugars') nutrients.sugar = value;
+      if (name === 'Fiber, total dietary') nutrients.fiber = value;
+      if (name === 'Sodium, Na') nutrients.sodium = value;
+    });
+
+    return {
+      id: food.fdcId,
+      name: food.description,
+      brand: food.brandOwner || 'Generic',
+      source: 'usda',
+      match_type: 'exact',
+      confidence_score: 0.95,
+      nutrients,
+    };
+  });
+
+  return results;
+};
+
+module.exports = { searchFood };
