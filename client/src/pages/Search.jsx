@@ -21,7 +21,7 @@ export default function Search() {
 
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/food/search?q=${query}`,
+        `${import.meta.env.VITE_API_URL}/api/food/search?q=${query}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setResults(res.data.results);
@@ -35,7 +35,7 @@ export default function Search() {
   const checkAlerts = async (food) => {
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/alerts/check",
+        `${import.meta.env.VITE_API_URL}/api/alerts/check`,
         { food_name: food.name, nutrients: food.nutrients },
         { headers: { Authorization: `Bearer ${token}` } }
       );
